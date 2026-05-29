@@ -1,0 +1,129 @@
+@model List<SistemaWorkflow.Dominio.Entidades.LogAuditoria>
+@{
+    ViewData["Title"] = "Painel Geral - Dashboard";
+}
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <h2 class="font-weight-bold m-0">Painel de Controle Geral</h2>
+        <p class="text-muted m-0">Monitore os indicadores de desempenho operacional e auditorias em tempo real.</p>
+    </div>
+    <a href="/Tarefas/Fila" class="btn btn-primary px-4 py-2 rounded-pill shadow-sm">
+        <i class="bi bi-clipboard-check"></i> Ir para Fila de Trabalho
+    </a>
+</div>
+
+<!-- Cards de KPIs Premium -->
+<div class="row mb-4">
+    <!-- Card 1 -->
+    <div class="col-md-3">
+        <div class="card p-3 border-0 bg-primary text-white">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="small font-weight-bold text-uppercase text-white-50">Instâncias Ativas</span>
+                <i class="bi bi-bezier2 fs-4"></i>
+            </div>
+            <h2 class="font-weight-bold">@ViewBag.InstanciasAtivas</h2>
+            <small class="text-white-50">Em andamento na empresa</small>
+        </div>
+    </div>
+    <!-- Card 2 -->
+    <div class="col-md-3">
+        <div class="card p-3 border-0 bg-warning text-dark">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="small font-weight-bold text-uppercase text-dark-50">Etapas Pendentes</span>
+                <i class="bi bi-clipboard-data-fill fs-4"></i>
+            </div>
+            <h2 class="font-weight-bold">@ViewBag.TarefasPendentes</h2>
+            <small class="text-dark-50">Aguardando ação manual</small>
+        </div>
+    </div>
+    <!-- Card 3 -->
+    <div class="col-md-3">
+        <div class="card p-3 border-0 bg-success text-white">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="small font-weight-bold text-uppercase text-white-50">Concluídos (Mês)</span>
+                <i class="bi bi-check-all fs-4"></i>
+            </div>
+            <h2 class="font-weight-bold">@ViewBag.ConcluidosMes</h2>
+            <small class="text-white-50">Processos finalizados</small>
+        </div>
+    </div>
+    <!-- Card 4 -->
+    <div class="col-md-3">
+        <div class="card p-3 border-0 bg-info text-white">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="small font-weight-bold text-uppercase text-white-50">Adesão ao SLA</span>
+                <i class="bi bi-stopwatch-fill fs-4"></i>
+            </div>
+            <h2 class="font-weight-bold">@ViewBag.MediaSla</h2>
+            <small class="text-white-50">Dentro do prazo limite</small>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Tabela de Logs de Auditoria Recentes -->
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header d-flex align-items-center justify-content-between">
+                <span><i class="bi bi-activity me-2 text-primary"></i> Trilha de Auditoria Recente (BPM)</span>
+                <span class="badge bg-light text-dark">Últimas 8 operações</span>
+            </div>
+            <div class="card-body p-0">
+                @if (Model == null || !Model.Any())
+                {
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-clipboard-x fs-1 mb-3"></i>
+                        <p>Nenhuma atividade ou auditoria registrada no banco de dados.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle m-0">
+                            <thead>
+                                <tr>
+                                    <th>Data / Hora</th>
+                                    <th>Operação</th>
+                                    <th>Mensagem / Justificativa</th>
+                                    <th>IP / Estação</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var log in Model)
+                                {
+                                    <tr>
+                                        <td>
+                                            <strong>@log.DataHora.ToString("dd/MM/yyyy")</strong><br />
+                                            <small class="text-muted">@log.DataHora.ToString("HH:mm:ss")</small>
+                                        </td>
+                                        <td>
+                                            @if (log.Acao.Contains("INICIAR") || log.Acao.Contains("CRIAR") || log.Acao.Contains("Insercao"))
+                                            {
+                                                <span class="badge bg-soft-primary bg-primary text-white">@log.Acao</span>
+                                            }
+                                            else if (log.Acao.Contains("HOMOLOG") || log.Acao.Contains("APROVAR") || log.Acao.Contains("Alteracao"))
+                                            {
+                                                <span class="badge bg-soft-success bg-success text-white">@log.Acao</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-soft-secondary bg-secondary text-white">@log.Acao</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <span class="font-weight-medium">Modificação na entidade <strong>@log.Entidade</strong></span>
+                                        </td>
+                                        <td>
+                                            <code class="text-muted">ID: @(log.ChaveEntidade.Length > 8 ? log.ChaveEntidade.Substring(0, 8).ToUpper() : log.ChaveEntidade)</code>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

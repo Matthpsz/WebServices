@@ -1,0 +1,63 @@
+@model List<SistemaWorkflow.Dominio.Entidades.VersaoProcesso>
+@{
+    ViewData["Title"] = "Homologações de Processos - BPM";
+}
+
+<div class="mb-4">
+    <h2 class="font-weight-bold m-0">Homologação de Processos e Workflows</h2>
+    <p class="text-muted m-0">Audite e valide a integridade dos processos criados pelos chefes antes de publicá-los em produção.</p>
+</div>
+
+<div class="card">
+    <div class="card-header bg-transparent">
+        <span>Processos em Rascunho / Sob Revisão</span>
+    </div>
+    <div class="card-body p-0">
+        @if (Model == null || !Model.Any())
+        {
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-shield-check fs-1 mb-2 text-success"></i>
+                <p>Nenhuma versão de processo pendente de validação/homologação no momento.</p>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle m-0">
+                    <thead>
+                        <tr>
+                            <th>Data de Criação</th>
+                            <th>Processo</th>
+                            <th>Versão</th>
+                            <th>Equipe Proprietária</th>
+                            <th>Status de Validação</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var v in Model)
+                        {
+                            <tr>
+                                <td>@v.DataCriacao.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td>
+                                    <strong>@v.Processo.Nome</strong><br />
+                                    <small class="text-muted">@v.Processo.Descricao</small>
+                                </td>
+                                <td><span class="badge bg-light text-dark border">Rascunho v#@v.NumeroVersao</span></td>
+                                <td>@v.Processo.Equipe.Nome</td>
+                                <td>
+                                    <span class="badge bg-warning"><i class="bi bi-clock"></i> Aguardando Validação</span>
+                                </td>
+                                <td>
+                                    <a href="/Processos/Revisar/@v.Id" class="btn btn-sm btn-primary rounded-pill px-3">
+                                        <i class="bi bi-shield-lock-fill"></i> Auditar e Validar
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

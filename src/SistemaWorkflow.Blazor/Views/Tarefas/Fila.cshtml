@@ -1,0 +1,127 @@
+@model List<SistemaWorkflow.Dominio.Entidades.TarefaProcesso>
+@{
+    ViewData["Title"] = "Fila de Trabalho Operacional - BPM";
+    var processosAtivos = ViewBag.ProcessosAtivos as List<SistemaWorkflow.Dominio.Entidades.VersaoProcesso> ?? new();
+}
+
+<div class="mb-4">
+    <h2 class="font-weight-bold m-0">Fila de Trabalho Operacional</h2>
+    <p class="text-muted m-0">Monitore suas demandas pendentes de execução e inicie novas solicitações de processos.</p>
+</div>
+
+<div class="row">
+    <!-- Iniciar Novo Processo -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-transparent">
+                <span><i class="bi bi-play-circle me-2 text-primary"></i> Instanciar Novo Processo</span>
+            </div>
+            <div class="card-body">
+                @if (!processosAtivos.Any())
+                {
+                    <div class="text-center py-4 text-muted small">
+                        Nenhum processo homologado ativo na empresa.
+                    </div>
+                }
+                else
+                {
+                    <form action="/Tarefas/IniciarInstancia" method="post">
+                        <div class="mb-3">
+                            <label class="form-label font-weight-semibold">Selecione o Processo</label>
+                            <select class="form-select" name="versaoId" required>
+                                <option value="">Escolha...</option>
+                                @foreach (var v in processosAtivos)
+                                {
+                                    <option value="@v.Id">@v.Processo.Nome (v#@v.NumeroVersao)</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label font-weight-semibold">Título/Identificador da Instância (Opcional)</label>
+                            <input type="text" class="form-control" name="titulo" placeholder="Ex: Solicitação TI #02, Contrato XYZ" />
+                            <div class="form-text text-muted">Facilita a busca operacional posterior.</div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100 rounded-pill py-2">
+                            <i class="bi bi-play-fill"></i> Iniciar Processo
+                        </button>
+                    </form>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Fila de Trabalho / Tarefas Pendentes -->
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header d-flex align-items-center justify-content-between">
+                <span><i class="bi bi-list-task me-2 text-warning"></i> Demandas na Minha Fila</span>
+                <span class="badge bg-warning text-dark">@Model.Count pendentes</span>
+            </div>
+            <div class="card-body p-0">
+                @if (Model == null || !Model.Any())
+                {
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-emoji-smile fs-1 mb-2 text-success"></i>
+                        <p class="mb-0">Excelente! Sua fila de trabalho está completamente limpa.</p>
+                        <small>Novas demandas aparecerão automaticamente conforme processos forem iniciados.</small>
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle m-0">
+                            <thead>
+                                <tr>
+                                    <th>Data / Prazo</th>
+                                    <th>Demanda / Processo</th>
+                                    <th>Etapa Atual</th>
+                                    <th>Prazo SLA</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var t in Model)
+                                {
+                                    var slaMinutos = t.Atividade.SlaMinutos;
+                                    var dataVencimento = t.DataCriacao.AddMinutes(slaMinutos);
+                                    bool estourado = DateTime.Now > dataVencimento;
+
+                                    <tr>
+                                        <td>
+                                            <strong>@t.DataCriacao.ToString("dd/MM/yyyy")</strong><br />
+                                            <small class="text-muted">@t.DataCriacao.ToString("HH:mm")</small>
+                                        </td>
+                                        <td>
+                                            <span class="font-weight-semibold">@t.InstanciaProcesso.CodigoIdentificador</span><br />
+                                            <small class="text-primary font-weight-medium">@t.Atividade.VersaoProcesso.Processo.Nome</small>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-soft-primary bg-primary text-white">@t.Atividade.Nome</span>
+                                        </td>
+                                        <td>
+                                            @if (estourado)
+                                            {
+                                                <span class="text-danger font-weight-bold"><i class="bi bi-clock-fill"></i> SLA Estourado</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-success font-weight-medium"><i class="bi bi-timer"></i> @((dataVencimento - DateTime.Now).Hours)h @((dataVencimento - DateTime.Now).Minutes)m restantes</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <a href="/Tarefas/Executar/@t.Id" class="btn btn-sm btn-primary rounded-pill px-3">
+                                                <i class="bi bi-pencil-square"></i> Executar
+                                            </a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

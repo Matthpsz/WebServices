@@ -1,0 +1,58 @@
+## Ignore Visual Studio temporary files, build results, and user metadata
+
+# User-specific files
+*.rsuser
+*.suo
+*.user
+*.userresourcecode
+*.usertasks
+
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Re]leases/
+x64/
+x86/
+[Aa]rm/
+[Aa]rm64/
+bbin/
+bin/
+obj/
+bin_*/
+obj_*/
+
+# Visual Studio 2015/2017/2019/2022 cache directory
+.vs/
+# Generated files
+Generated_Files/
+
+# MSTest test Results
+[T]est[R]esult*/
+[B]uild[L]og.*
+
+# NUnit
+/*.VisualState.xml
+
+# Rider
+.idea/
+
+# Visual Studio Code
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/code-workspace
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# User Connection Strings and Secrets
+appsettings.json
+!src/SistemaWorkflow.Blazor/appsettings.json
+!src/SistemaWorkflow.Api/appsettings.json
+appsettings.Development.json
+appsettings.Production.json
+secrets.json

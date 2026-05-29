@@ -1,0 +1,503 @@
+@{
+    var nomeLogado = User.Identity?.Name ?? "Administrador";
+    var emailLogado = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Email)?.Value ?? "admin@workflow.com.br";
+    var perfilLogado = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Role)?.Value ?? "Administrador";
+    
+    var iniciais = "AD";
+    if (!string.IsNullOrWhiteSpace(nomeLogado))
+    {
+        var partes = nomeLogado.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (partes.Length >= 2)
+        {
+            iniciais = (partes[0][0].ToString() + partes[1][0].ToString()).ToUpper();
+        }
+        else if (partes.Length == 1 && partes[0].Length >= 2)
+        {
+            iniciais = partes[0].Substring(0, 2).ToUpper();
+        }
+    }
+
+    bool ehAdminOuGestor = perfilLogado == "Administrador" || perfilLogado == "Gestor";
+
+    // Busca do banco se o usuário logado possui privilégios de Chefe / Subgestor em alguma equipe (perfil de Exceção)
+    bool ehChefeDeEquipe = false;
+    var contexto = ViewContext.HttpContext.RequestServices.GetService<SistemaWorkflow.Infraestrutura.BancoDados.ContextoWorkflow>();
+    if (contexto != null && emailLogado != null)
+    {
+        ehChefeDeEquipe = System.Linq.Queryable.Any(
+            contexto.EquipeUsuarios, 
+            eu => eu.Usuario.Email == emailLogado && eu.AdministradorEquipe && eu.Ativo
+        );
+    }
+}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Workflow & BPM Corporativo</title>
+    
+    <!-- Bootstrap 5 & Google Fonts -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet" />
+    
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-color: #212529;
+            --text-muted: #6c757d;
+            --border-color: #e9ecef;
+            --primary-color: #1e3a8a;
+            --secondary-color: #3b82f6;
+            --sidebar-width: 260px;
+            --header-height: 70px;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-color: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: #334155;
+            --primary-color: #3b82f6;
+            --secondary-color: #60a5fa;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s ease, color 0.3s ease;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        /* Layout Structure */
+        #wrapper {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        #sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--card-bg);
+            border-right: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            height: 100vh;
+            z-index: 1000;
+        }
+
+        #content-wrapper {
+            flex: 1;
+            margin-left: var(--sidebar-width);
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            transition: all 0.3s ease;
+        }
+
+        #header {
+            height: var(--header-height);
+            background-color: var(--card-bg);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-center;
+            justify-content: space-between;
+            padding: 0 1.5rem;
+            position: sticky;
+            top: 0;
+            z-index: 999;
+        }
+
+        .main-content {
+            padding: 2rem;
+            flex: 1;
+        }
+
+        /* Sidebar Styling */
+        .sidebar-brand {
+            height: var(--header-height);
+            display: flex;
+            align-items: center;
+            padding: 0 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 800;
+            font-size: 1.25rem;
+            color: var(--primary-color);
+            text-decoration: none;
+            gap: 0.5rem;
+        }
+
+        .nav-section-title {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            padding: 1.5rem 1.5rem 0.5rem;
+        }
+
+        .sidebar-nav {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1.5rem;
+            color: var(--text-color);
+            text-decoration: none;
+            gap: 0.75rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            border-left: 3px solid transparent;
+        }
+
+        .sidebar-link:hover, .sidebar-link.active {
+            background-color: var(--border-color);
+            color: var(--primary-color);
+            border-left-color: var(--primary-color);
+        }
+
+        /* Cards & Premium UI elements */
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            margin-bottom: 1.5rem;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .card:hover {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+        }
+
+        .card-header {
+            background-color: transparent;
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 700;
+            padding: 1.25rem 1.5rem;
+        }
+
+        .table {
+            color: var(--text-color);
+        }
+
+        .table th {
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+        }
+
+        .table td, .table th {
+            border-color: var(--border-color);
+            padding: 1rem 1.5rem;
+        }
+
+        /* Avatar dropdown menu */
+        .avatar-circle {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .avatar-circle:hover {
+            opacity: 0.9;
+            transform: scale(1.05);
+        }
+
+        .profile-dropdown-card {
+            min-width: 240px;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            background-color: var(--card-bg);
+        }
+
+        .profile-dropdown-avatar {
+            width: 54px;
+            height: 54px;
+            border-radius: 50%;
+            background-color: var(--secondary-color);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="wrapper">
+        <!-- Barra de Navegação Lateral -->
+        <aside id="sidebar">
+            <a href="/" class="sidebar-brand">
+                <i class="bi bi-diagram-3-fill text-primary"></i>
+                <span>Workflow & BPM</span>
+            </a>
+            
+            <div class="nav-section-title">Processos & Tarefas</div>
+            <ul class="sidebar-nav">
+                <li>
+                    <a class="sidebar-link" id="link-dashboard" href="/">
+                        <i class="bi bi-speedometer2"></i>
+                        <span>Painel Geral</span>
+                    </a>
+                                @if (ehAdminOuGestor || ehChefeDeEquipe)
+                {
+                    <li>
+                        <a class="sidebar-link" id="link-processos" href="/Processos">
+                            <i class="bi bi-bezier2"></i>
+                            <span>Processos</span>
+                        </a>
+                    </li>
+                }
+                <li>
+                    <a class="sidebar-link" id="link-tarefas" href="/Tarefas/Fila">
+                        <i class="bi bi-clipboard-check"></i>
+                        <span>Fila de Trabalho</span>
+                    </a>
+                </li>
+                @if (ehAdminOuGestor)
+                {
+                    <li>
+                        <a class="sidebar-link" id="link-homologacoes" href="/Processos/Homologacoes">
+                            <i class="bi bi-shield-check"></i>
+                            <span>Aprovações</span>
+                        </a>
+                    </li>
+                }
+            </ul>
+
+            @if (ehAdminOuGestor)
+            {
+                <div class="nav-section-title">Modeladores (Builders)</div>
+                <ul class="sidebar-nav">
+                    <li>
+                        <a class="sidebar-link" id="link-formbuilder" href="/Formularios/Criar">
+                            <i class="bi bi-file-earmark-ruled"></i>
+                            <span>Form Builder</span>
+                        </a>
+                    </li>
+                </ul>
+
+                <div class="nav-section-title">Administração</div>
+                <ul class="sidebar-nav">
+                    <li>
+                        <a class="sidebar-link" id="link-usuarios" href="/Usuarios">
+                            <i class="bi bi-people"></i>
+                            <span>Usuários</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="sidebar-link" id="link-equipes" href="/Equipes">
+                            <i class="bi bi-building"></i>
+                            <span>Equipes</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="sidebar-link" id="link-permissoes" href="/Permissoes">
+                            <i class="bi bi-shield-lock"></i>
+                            <span>Permissões</span>
+                        </a>
+                    </li>
+                </ul>
+            }
+        </aside>
+
+        <!-- Wrapper do Conteúdo Principal -->
+        <div id="content-wrapper">
+            <!-- Barra Superior (App Bar) -->
+            <header id="header" class="align-items-center">
+                <div class="d-flex align-items-center gap-2">
+                    <button class="btn btn-link text-decoration-none d-lg-none" type="button" id="sidebarToggle">
+                        <i class="bi bi-list fs-3 text-dark"></i>
+                    </button>
+                    <h5 class="m-0 font-weight-bold d-none d-sm-block">Painel Administrativo</h5>
+                </div>
+
+                <div class="d-flex align-items-center gap-3">
+                    <!-- Seletor de Tema Escuro/Claro -->
+                    <button class="btn btn-outline-secondary border-0 btn-sm rounded-circle px-2" type="button" id="themeToggle" title="Alternar Tema">
+                        <i class="bi bi-moon-fill" id="themeIcon"></i>
+                    </button>
+
+                    <!-- Notificações -->
+                    <button class="btn btn-outline-secondary border-0 btn-sm rounded-circle px-2" type="button" title="Notificações">
+                        <i class="bi bi-bell-fill"></i>
+                    </button>
+
+                    <!-- Menu de Perfil de Usuário Premium -->
+                    <div class="dropdown">
+                        <div class="avatar-circle" id="profileDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            @iniciais
+                        </div>
+                        <ul class="dropdown-menu dropdown-menu-end p-0 border-0" aria-labelledby="profileDropdown">
+                            <li>
+                                <div class="profile-dropdown-card pa-3 text-center border p-3">
+                                    <div class="d-flex flex-column align-items-center">
+                                        <div class="profile-dropdown-avatar">@iniciais</div>
+                                        <h6 class="m-0 font-weight-bold mt-2">@nomeLogado</h6>
+                                        <small class="text-muted mb-2">@emailLogado</small>
+                                        <span class="badge bg-primary px-3 py-1 rounded-pill mt-1">Função: @perfilLogado</span>
+                                    </div>
+                                    <hr class="my-3 text-muted" />
+                                    <div class="text-start">
+                                        <a class="dropdown-item py-2 rounded d-flex align-items-center gap-2" href="/Usuarios">
+                                            <i class="bi bi-person"></i> Meu Cadastro
+                                        </a>
+                                        <a class="dropdown-item py-2 rounded d-flex align-items-center gap-2" href="/Permissoes">
+                                            <i class="bi bi-shield-lock"></i> Privilégios
+                                        </a>
+                                    </div>
+                                    <hr class="my-3 text-muted" />
+                                    <button class="btn btn-danger btn-sm w-100 rounded-pill py-2" type="button" onclick="simularLogout()">
+                                        <i class="bi bi-box-arrow-right"></i> Sair do Sistema
+                                    </button>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Conteúdo Principal -->
+            <main class="main-content">
+                <!-- Alertas / Mensagens Temporárias -->
+                @if (TempData["Sucesso"] != null)
+                {
+                    <div class="alert alert-success alert-dismissible fade show rounded-lg border-0 shadow-sm mb-4" role="alert">
+                        <i class="bi bi-check-circle-fill me-2"></i> @TempData["Sucesso"]
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                }
+                @if (TempData["Erro"] != null)
+                {
+                    <div class="alert alert-danger alert-dismissible fade show rounded-lg border-0 shadow-sm mb-4" role="alert">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i> @TempData["Erro"]
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                }
+
+                @RenderBody()
+            </main>
+
+            <!-- Rodapé -->
+            <footer class="bg-white border-top py-3 text-center text-muted">
+                <small>&copy; @DateTime.Now.Year - BPM Workflow Corporativo - Todos os direitos reservados. (Modo MVC Offline)</small>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Scripts de Controle Local (Tema Escuro e Links Ativos) -->
+    <script>
+        // Suporte a Tema Escuro
+        const themeToggleBtn = document.getElementById('themeToggle');
+        const themeIcon = document.getElementById('themeIcon');
+
+        // Carrega tema do localStorage
+        if (localStorage.getItem('theme') === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            themeIcon.className = 'bi bi-sun-fill';
+        } else {
+            document.documentElement.setAttribute('data-theme', 'light');
+            themeIcon.className = 'bi bi-moon-fill';
+        }
+
+        themeToggleBtn.addEventListener('click', () => {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            if (currentTheme === 'dark') {
+                document.documentElement.setAttribute('data-theme', 'light');
+                localStorage.setItem('theme', 'light');
+                themeIcon.className = 'bi bi-moon-fill';
+            } else {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                localStorage.setItem('theme', 'dark');
+                themeIcon.className = 'bi bi-sun-fill';
+            }
+        });
+
+        // Toggle Sidebar no Mobile
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const sidebar = document.getElementById('sidebar');
+        const contentWrapper = document.getElementById('content-wrapper');
+
+        if (sidebarToggle) {
+            sidebarToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('d-none');
+            });
+        }
+
+        // Simulação de Logout Corporativo Premium com Redirecionamento de Verdade
+        function simularLogout() {
+            // Criar overlay de transição em tela cheia super elegante
+            const overlay = document.createElement('div');
+            overlay.style.position = 'fixed';
+            overlay.style.top = '0';
+            overlay.style.left = '0';
+            overlay.style.width = '100vw';
+            overlay.style.height = '100vh';
+            overlay.style.backgroundColor = 'rgba(15, 23, 42, 0.95)';
+            overlay.style.color = '#fff';
+            overlay.style.display = 'flex';
+            overlay.style.flexDirection = 'column';
+            overlay.style.alignItems = 'center';
+            overlay.style.justifyContent = 'center';
+            overlay.style.zIndex = '99999';
+            
+            overlay.innerHTML = `
+                <div class="text-center" style="animation: fadeIn 0.5s ease;">
+                    <div class="spinner-border text-primary mb-4" style="width: 3rem; height: 3rem;" role="status">
+                        <span class="visually-hidden">Carregando...</span>
+                    </div>
+                    <h3 class="fw-bold mb-2">Encerrando Sessão Segura</h3>
+                    <p class="text-secondary small mb-0">Limpando credenciais do servidor corporativo e redirecionando...</p>
+                </div>
+            `;
+            
+            document.body.appendChild(overlay);
+            
+            // Redireciona de verdade para a rota real de Logout após 1.5s
+            setTimeout(() => {
+                window.location.href = '/Usuarios/Logout';
+            }, 1500);
+        }
+
+        // Destaca link ativo no menu lateral
+        const path = window.location.pathname.toLowerCase();
+        document.querySelectorAll('.sidebar-link').forEach(link => {
+            const href = link.getAttribute('href').toLowerCase();
+            if ((href === '/' && path === '/') || (href !== '/' && path.startsWith(href))) {
+                link.classList.add('active');
+            }
+        });
+    </script>
+
+    @RenderSection("Scripts", required: false)
+</body>
+</html>
